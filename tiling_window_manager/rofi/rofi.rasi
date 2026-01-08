@@ -1,0 +1,94 @@
+/* --- Global configuration --- */
+configuration {
+    modi: "drun";
+    show-icons: true;
+    display-drun: "󰀻 App Launcher ";
+    drun-display-format: "{name}";
+    // Fallback default font:
+    font: "Hack Nerd Font 16";
+}
+
+/* --- Import specific color config --- */
+@import "color.rasi"
+
+/* --- Main Window --- */
+window {
+    width: 800px;
+    height: 440px;
+    border: 4px;
+    border-color: @border;
+    border-radius: 15px;
+    background-color: @background;
+    padding: 0;
+}
+
+/* --- MainBox (title) --- */ 
+mainbox {
+    // Order of inner widgets: 
+    children: ["inputbar", "listview"];
+    spacing: 1; 
+    background-color: @background;
+}
+
+/* --- Top Bar (prompt + entry) --- */ 
+inputbar {
+    children: ["prompt", "entry"];
+    spacing: 0;
+    border: 0 0 2 0;
+    border-color: @border;
+    background-color: @background;
+}
+
+/* --- Prompt (The "App Launcher" text) --- */ 
+prompt {
+    background-color: transparent;
+    text-color: @text;
+    font: "Hack Nerd Font Bold 22";
+    padding: 10 0 10 20; 
+}
+
+/* --- Entry (The Search box ) --- */ 
+entry {
+    background-color: transparent;
+    text-color: @text;
+    font: "Hack Nerd Font 22";
+    placeholder: "Search...";
+    placeholder-color: @text-placeholder;
+    padding: 10 0 0 0; 
+}
+
+/* --- List view (elements) --- */ 
+listview {
+    border: 0;
+    background-color: transparent;
+    scrollbar: false;
+    padding: 10 0 0 0; 
+}
+
+element {
+    margin: 2 10 2 10;
+    padding: 8 2 8 10; 
+    background-color: transparent;
+    text-color: @text;
+    border-radius: 8;
+}
+
+element-icon {
+    size: 30;
+    background-color: transparent;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: @text;
+    vertical-align: 0.5;
+    font: "Hack Nerd Font 18";
+    padding: 0 0 0 10; 
+}
+
+element selected {
+    background-color: @background-selected;
+    text-color: @text-selected;
+    border: 0px 0px 0px 5px;
+    border-color: @border;
+}
