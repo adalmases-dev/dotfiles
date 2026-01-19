@@ -1,0 +1,171 @@
+# Cli tools aliases
+
+# sudo wrapper (avoids sudo bypassing)
+alias sudo='sudo '
+
+# ls
+ls_on_steroids(){
+  if command -v eza >/dev/null 2>&1; then
+    eza --group-directories-first --icons --git "$@" 
+  else 
+    ls --color=auto --group-directories-first "$@"
+  fi 
+}
+
+alias ls='ls_on_steroids'
+alias ll='ls -lh' # long view
+alias la='ls -a' # all files
+
+# cd 
+cd_on_steroids(){
+ if command -v zoxide >/dev/null 2>&1; then
+    z "$@" && ls
+  else 
+    cd "$@" && ls
+  fi 
+}
+
+alias cd='cd_on_steroids'
+alias bb='cd ../..'
+alias bbb='cd ../../..'
+alias bbbb='cd ../../../..'
+
+# mkdir & cd
+mkcd(){
+  mkdir -p "$@" && cd "$@"
+}
+
+# cat
+cat_on_steroids(){
+  if command -v bat >/dev/null 2>&1; then
+    bat --color=always --paging=never "$@"
+  else 
+    cat "$@"
+  fi 
+}
+alias cat='cat_on_steroids'
+alias preview='cat_on_steroids --paging=always'
+
+# grep 
+grep_on_steroids(){
+  if command -v rg >/dev/null 2>&1; then 
+    rg "$@"
+  else 
+    grep --color=auto "$@"
+  fi
+}
+alias grep='grep_on_steroids'
+
+# cp, mv, rm safe overrides. 
+# Use \cp \mv \rm to ignore the aliases
+alias cp='cp -iv'
+alias mv='mv -iv'
+alias rm='rm -iv'
+
+# video edit util
+# Usage: v-edit <input> [output] [start] [end] [speed]
+v-edit() {
+    # Help / Usage Section
+    if [[ $# -le 1 ]] || [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+        echo ""
+        echo "Usage: v-edit <input> [output] [start] [end] [speed]"
+        echo ""
+        echo "Arguments:"
+        echo "  input    : Source file (Required)"
+        echo "  output   : Optional. If ends in .gif, .mp4, etc., it converts format."
+        echo "  start    : Optional start time (seconds or 00:00:00)."
+        echo "  end      : Optional end time (seconds or 00:00:00)."
+        echo "  speed    : Optional multiplier (e.g. 2 for 2x, 0.5 for slow-mo)."
+        echo ""
+        echo "Examples:"
+        echo "  v-edit in.mp4 out.gif 5 10 2    # Trim, convert, 2x speed"
+        echo "  v-edit in.mp4 00:05             # Trim from 5s to end"
+        echo "  v-edit in.mp4 out.webm          # Simple format conversion"
+        echo ""
+        return 0
+    fi
+
+    # Argument Parsing Logic
+    local input="$1"
+    local output=""
+    local start=""
+    local end=""
+    local speed=""
+
+    # We shift through arguments to see what the user actually meant
+    shift 1
+    while [[ $# -gt 0 ]]; do
+        if [[ "$1" == *"."* ]]; then
+            output="$1"
+        elif [[ "$1" == *":"* ]] || [[ "$1" =~ ^[0-9]+$ ]] && [[ -z "$start" ]]; then
+            # Looks like a timestamp and start isn't set yet
+            start="$1"
+        elif [[ "$1" == *":"* ]] || [[ "$1" =~ ^[0-9]+$ ]] && [[ -n "$start" ]] && [[ -z "$end" ]]; then
+            # Looks like a timestamp and start IS set, so this is 'end'
+            end="$1"
+        elif [[ "$1" =~ ^[0-9.]+$ ]]; then
+            # A pure number (possibly decimal) is treated as speed
+            speed="$1"
+        fi
+        shift 1
+    done
+
+    # Default output name if none provided
+    if [[ -z "$output" ]]; then
+        local filename="${input%.*}"
+        local ext="${input##*.}"
+        output="${filename}_edited.${ext}"
+    fi
+
+    if [[ ! -f "$input" ]]; then
+        echo "[ERROR]: Input file '$input' not found."
+        return 1
+    fi
+
+    #Construct Basic FFmpeg Args
+    local args=("-v" "warning" "-i" "$input")
+    
+    [[ -n "$start" ]] && args+=("-ss" "$start")
+    [[ -n "$end" ]] && args+=("-to" "$end")
+
+    # Filter Logic (Speed only)
+    local v_filters=""
+    local a_filters=""
+    
+    if [[ -n "$speed" ]] && [[ "$speed" != "1" ]] && [[ "$speed" != "1.0" ]]; then
+        local v_pts=$(bc -l <<< "1/$speed")
+        v_filters="setpts=${v_pts}*PTS"
+        
+        # Daisy-chain atempo for speeds > 2.0 or < 0.5
+        local cur_s=$speed
+        while (( $(echo "$cur_s > 2.0" | bc -l) )); do a_filters="${a_filters}atempo=2.0,"; cur_s=$(bc -l <<< "$cur_s/2.0"); done
+        while (( $(echo "$cur_s < 0.5" | bc -l) )); do a_filters="${a_filters}atempo=0.5,"; cur_s=$(bc -l <<< "$cur_s/0.5"); done
+        a_filters="${a_filters}atempo=${cur_s}"
+    fi
+
+    # Execution
+    local out_ext="${output##*.}"
+    echo "Processing $input -> $output..."
+
+    if [[ "$out_ext" == "gif" ]]; then
+        # Specialized High-Quality GIF Pipeline (Original Resolution)
+        # We ensure dimensions are even for compatibility if coming from MP4
+        local gif_vf="fps=12,scale=trunc(iw/2)*2:trunc(ih/2)*2:flags=lanczos"
+        [[ -n "$v_filters" ]] && gif_vf="${v_filters},${gif_vf}"
+        
+        ffmpeg "${args[@]}" -vf "${gif_vf},split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -y "$output"
+    else
+        # Standard Video Pipeline (Original Resolution)
+        # scale logic used to ensure even dimensions (MP4 requirement)
+        local vid_vf="scale=trunc(iw/2)*2:trunc(ih/2)*2"
+        [[ -n "$v_filters" ]] && vid_vf="${v_filters},${vid_vf}"
+
+        if [[ -n "$a_filters" ]]; then
+            ffmpeg "${args[@]}" -vf "$vid_vf" -af "$a_filters" -preset fast -y "$output"
+        else
+            ffmpeg "${args[@]}" -vf "$vid_vf" -preset fast -y "$output"
+        fi
+    fi
+
+    echo "Result saved to $output ($(du -h "$output" | cut -f1))"
+}

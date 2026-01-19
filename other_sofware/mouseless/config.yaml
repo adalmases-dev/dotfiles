@@ -1,0 +1,47 @@
+# Set speed for mouse movement and scrolling
+baseMouseSpeed: 630.0
+baseScrollSpeed: 20.0
+
+comboTime: 120 
+
+# the rest of the config defines the layers with their bindings
+layers:
+# the first layer is active at start
+- name: initial
+  bindings:
+    rightalt+k: layer mouse
+    # can make capslock a useful key!
+    # esc: capslock
+    # capslock: esc
+
+- name: mouse  
+  enterCommand: "notify-send 'mouseless ON' -t 2000"
+  exitCommand: "notify-send 'mouseless OFF' -t 2000"
+  bindings:
+    q: layer initial
+    esc: layer initial
+    r: reload-config
+
+    h: move -1  0
+    j: move  0  1
+    k: move  0 -1
+    l: move  1  0
+    
+    y: scroll left
+    u: scroll down
+    i: scroll up
+    o: scroll right 
+    leftshift: toggle-layer scroll 
+
+    s: speed 2.0
+    a: speed 0.2
+    
+    f: button left
+    g: button right
+
+- name: scroll 
+  bindings:
+    h: scroll left
+    j: scroll down
+    k: scroll up
+    l: scroll right 

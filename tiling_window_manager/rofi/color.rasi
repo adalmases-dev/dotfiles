@@ -1,0 +1,18 @@
+/**
+ *
+ * Color Pallete: Nordic custom
+ *
+ * Description: A high-contrast nord-based them focusing on the Frost cyan 
+ * accent for borders and active text, with a soft bray/blue background.
+ *
+ **/
+
+* {
+    background: #2e3440;
+    text: #88c0d0;
+    background-selected: #434c5e;
+    text-selected: #88c0d0;
+    text-placeholder: #4c566a; 
+    border: #88c0d0; 
+}
+
