@@ -42,7 +42,7 @@ format = '[on](white) [$symbol $branch]($style)'
 
 [git_status]
 style = "fg:yellow"
-format = '$ahead_behind \[[$all_status]($style)\]'
+format = ' $ahead_behind \[[$all_status]($style)\]'
 ahead ="[](fg:blue)"
 behind ="[](fg:peach)"
 diverged ="[⇡${ahead_count}⇣${behind_count}](bold fg:red)" 
