@@ -41,7 +41,7 @@ link_file() {
       info "Configuration symlink is ok at $dest"
       return
     else
-      warn "Configuration at $dest is being remapped from $current_target to $src"
+      warn "Configuration at $dest is being remapped from its current link to $current_target"
       unlink "$dest"
     fi
   elif [ -e "$dest" ]; then

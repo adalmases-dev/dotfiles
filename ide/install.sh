@@ -25,7 +25,7 @@ info "Installing/ensuring basic dependencies..."
 
 # Handle Ripgrep (rg), and tree-sitter recommended dependecy via rust
 install_rust_tool "ripgrep" "BurntSushi/ripgrep" "rg"
-install_rust_tool "tree-sitter" "tree-sitter/tree-sitter" "tree-sitter"
+install_rust_tool "tree-sitter-cli" "tree-sitter/tree-sitter" "tree-sitter"
 
 sudo apt-get update -qq && sudo apt-get install -y curl gcc make unzip build-essential npm
 
