@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Helium
+Comment=Launch the Helium Application
+Exec=/opt/helium/helium.AppImage %U
+Icon=/opt/helium/helium.png
+Terminal=false
+Type=Application
+Categories=Utility;Network;
+MimeType=x-scheme-handler/unknown;x-scheme-handler/about;x-scheme-handler/https;x-scheme-handler/http;text/html;
