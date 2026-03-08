@@ -10,10 +10,6 @@ source "$DOTFILES_DIR_ROOT/utils.sh"
 
 info "Installing other software tools..."
 
-# Install Peek - Screen recorder
-sudo apt-get update -qq
-sudo apt-get install -y peek
-
 # Install Mouseless
 MOUSELESS_BIN_PATH="/usr/local/bin/mouseless"
 LATEST_MOUSELESS=$(get_latest_github_tag "jbensmann/mouseless")
