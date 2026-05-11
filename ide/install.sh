@@ -6,50 +6,59 @@ CURRENT_DIR="$(pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTFILES_DIR_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Load helpers
 source "$DOTFILES_DIR_ROOT/utils.sh"
 
-info "Installing Neovim..."
+info "Installing dependencies..."
+sudo apt-get update -qq
+sudo apt-get install -y -qq curl unzip build-essential npm
 
-TEMP_DIR=$(mktemp -d)
-trap 'rm -rf "$TEMP_DIR"; cd "$CURRENT_DIR"' EXIT
-cd "$TEMP_DIR"
+# Some dependencies (latest version, instead of apt)
+LATEST_FZF=$(get_latest_github_tag "junegunn/fzf")
+CURRENT_FZF=$(get_current_version_tag "fzf")
+if ! has_command "fzf" || is_update_required "$CURRENT_FZF" "$LATEST_FZF"; then
+  info "Installing/Updating fzf ($LATEST_FZF)..."
+  rm -rf "$HOME/.fzf"
+  git clone --depth 1 https://github.com/junegunn/fzf.git "$HOME/.fzf"
+  "$HOME/.fzf/install" --all --no-bash --no-zsh
+  sudo ln -sf "$HOME/.fzf/bin/fzf" /usr/local/bin/fzf
+else
+  info "fzf is up to date ($LATEST_FZF)."
+fi
 
-URL="https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz"
-TARBALL=$(basename "$URL")
-INSTALL_PARENT="/opt"
-INSTALL_DIR="$INSTALL_PARENT/${TARBALL%%.tar.gz}"
-BIN_PATH="/usr/local/bin/nvim" # Install will be symlinked here
-
-# Check dependencies for main Neovim plugins (for telescope, build-essential for treesitter, unzip for mason...)
-info "Installing/ensuring basic dependencies..."
-
-# Handle Ripgrep (rg), and tree-sitter recommended dependecy via rust
 install_rust_tool "ripgrep" "BurntSushi/ripgrep" "rg"
+install_rust_tool "fd-find" "sharkdp/fd" "fd"
 install_rust_tool "tree-sitter-cli" "tree-sitter/tree-sitter" "tree-sitter"
 
-sudo apt-get update -qq && sudo apt-get install -y curl gcc make unzip build-essential npm
-
-# Install Nvim
+# Neovim Logic
 LATEST_NVIM=$(get_latest_github_tag "neovim/neovim")
 CURRENT_NVIM=$(get_current_version_tag "nvim")
-if ! has_command "nvim" || is_update_required "$CURRENT_NVIM" $LATEST_NVIM; then
-  info "Installing/Upgrading Neovim ($LATEST_NVIM)..."
-  curl -LO "$URL"
-  sudo rm -rf "$INSTALL_DIR"
-  sudo tar -C "$INSTALL_PARENT" -xzf "$TARBALL"
-  rm "$TARBALL"
-  sudo rm -f "$BIN_PATH"
-  # Link /opt/nvim-linux64/bin/nvim to /usr/local/bin/nvim
-  sudo ln -s "$INSTALL_DIR/bin/nvim" "$BIN_PATH"
 
-  rm -rf "$TEMP_DIR"
+if ! has_command "nvim" || is_update_required "$CURRENT_NVIM" "$LATEST_NVIM"; then
+    info "Installing Neovim ($LATEST_NVIM)..."
+    
+    TEMP_DIR=$(mktemp -d)
+    trap 'rm -rf "$TEMP_DIR"' EXIT
+    {
+      cd "$TEMP_DIR" || exit 1
+
+      # Using the specific tag ensures consistency
+      URL="https://github.com/neovim/neovim/releases/download/${LATEST_NVIM}/nvim-linux-x86_64.tar.gz"
+      
+      curl -LO "$URL"
+      sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
+      
+      # Create symlink to the binary
+      sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+      
+      info "Neovim installed successfully."
+    }
 else
-  info "Neovim is up to date ($LATEST_NVIM)."
+    info "Neovim is up to date ($LATEST_NVIM)."
 fi
 
 # Symlink configuration
 mkdir -p "$HOME/.config"
-
 info "Linking configuration for: nvim"
 link_file "$SCRIPT_DIR/nvim" "$HOME/.config/nvim"
 
