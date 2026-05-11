@@ -63,43 +63,63 @@ get_latest_github_tag() {
   local auth_header=()
   [[ -n "$GITHUB_TOKEN" ]] && auth_header=("-H" "Authorization: token $GITHUB_TOKEN")
 
-  # Try Releases first
+  # Use jq for both to keep it consistent and clean
   local json=$(curl -sL "${auth_header[@]}" "https://api.github.com/repos/$repo/releases/latest")
-  local tag=$(echo "$json" | grep '"tag_name":' | sed -E 's/.*"tag_name":\s*"([^"]+)".*/\1/')
+  local tag=$(echo "$json" | jq -r '.tag_name // empty')
 
-  # Fallback to Tags with Filtering
-  if [[ -z "$tag" ]] || [[ "$tag" == "null" ]]; then
-    # We fetch the tags list and look for the first one that starts with a number or 'v' followed by a number
-    # This ignores things like "tree-pr", "deprecated", or "stable"
+  if [[ -z "$tag" || "$tag" == "null" ]]; then
     json=$(curl -sL "${auth_header[@]}" "https://api.github.com/repos/$repo/tags")
-    # Regex: starts with v and a digit, or just a digit
-    tag=$(echo "$json" | jq -r '[.[] | select(.name | test("^(v)?[0-9]"))][0].name')
+    tag=$(echo "$json" | jq -r '[.[] | select(.name | test("^(v)?[0-9]"))][0].name // empty')
   fi
 
   echo "$tag"
 }
 
 get_current_version_tag() {
-  local binary=$1
-  if ! has_command "$binary"; then
-    echo "0.0.0" # Default for missing tools
-    return
-  fi
+    local binary=$1
+    if ! command -v "$binary" &> /dev/null; then
+        echo "0.0.0"
+        return
+    fi
 
-  echo "$("$binary" --version 2>&1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1)"
+    local version=$("$binary" --version 2>&1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1)
+
+    if [[ -z "$version" ]]; then
+        version=$("$binary" --version 2>&1 | awk '{print $3}')
+    fi
+
+    echo "$version"
 }
-
-# Returns 0 (True) if an update IS needed, 1 (False) if it is NOT.
-# This follows standard Bash logic: if is_update_required; then ...
 is_update_required() {
-  local current="${1#v}"
-  local latest="${2#v}"
+    local latest="${1#v}"
+    local current="${2#v}"
 
-  if [[ "$current" == "$latest" ]]; then
-    return 1 # False: No update needed
-  else
-    return 0 # True: Update needed
-  fi
+    latest=$(echo "$latest" | cut -d'-' -f1)
+    current=$(echo "$current" | cut -d'-' -f1)
+
+    # Count dots to determine "granularity" 
+    # (e.g., 4.25 has 1 dot, 4.25.1 has 2 dots)
+    local dots_latest=$(echo "$latest" | tr -cd '.' | wc -c)
+    local dots_current=$(echo "$current" | tr -cd '.' | wc -c)
+
+    if [[ $dots_latest -ne $dots_current ]]; then
+        # Different granularity: Compare only Major.Minor
+        local latest_mm=$(echo "$latest" | cut -d'.' -f1,2)
+        local current_mm=$(echo "$current" | cut -d'.' -f1,2)
+        
+        if [[ "$latest_mm" == "$current_mm" ]]; then
+            return 1 # False: Major.Minor matches, ignore missing patch
+        fi
+    fi
+
+    [[ "$latest" == "$current" ]] && return 1
+
+    local newest=$(printf '%s\n%s' "$latest" "$current" | sort -V | tail -n1)
+    if [[ "$newest" == "$latest" && "$latest" != "$current" ]]; then
+        return 0 # True: An actual update is available
+    fi
+
+    return 1 # False: Already up to date or current is newer
 }
 
 # Ensure Rust is installed auxiliar
