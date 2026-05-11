@@ -90,9 +90,20 @@ chosen=$(
 )
 
 case $chosen in
-$lock) i3lock-fancy ;;
-$suspend) systemctl suspend ;;
-$logout) i3-msg exit ;;
-$reboot) systemctl reboot ;;
-$shutdown) systemctl poweroff ;;
+$lock) 
+  /home/adalmases/.config/i3/scripts/lock_script.sh 
+  ;;
+$suspend) 
+  loginctl lock-session
+  systemctl suspend 
+  ;;
+$logout) 
+  i3-msg exit 
+  ;;
+$reboot) 
+  systemctl reboot 
+  ;;
+$shutdown) 
+  systemctl poweroff 
+  ;;
 esac
