@@ -49,6 +49,7 @@ alias preview='cat_on_steroids --paging=always'
 # grep 
 grep_on_steroids(){
   if command -v rg >/dev/null 2>&1; then 
+    # rg --column --line-number --no-heading --color=always --smart-case --max-columns=4096 -e "$@"
     rg "$@"
   else 
     grep --color=auto "$@"
@@ -56,11 +57,9 @@ grep_on_steroids(){
 }
 alias grep='grep_on_steroids'
 
-# cp, mv, rm safe overrides. 
-# Use \cp \mv \rm to ignore the aliases
-alias cp='cp -iv'
-alias mv='mv -iv'
-alias rm='rm -iv'
+# trash as a safe rm alternative.  
+alias trash='gio trash'
+
 
 # video edit util
 # Usage: v-edit <input> [output] [start] [end] [speed]
